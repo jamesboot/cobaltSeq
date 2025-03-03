@@ -1,0 +1,53 @@
+# README
+
+## Sequencing folder
+`/nemo/stp/babs/inputs/sequencing/data/swantonc/su-kit.chew/DN20060/primary_data/`
+
+## Sequencing runs
+- `201008_K00371_0408_AHHYFWBBXY`
+- `210831_A01366_0049_AH35HJDMXY`
+- `210902_A01366_0050_AH2WG2DMXY`
+- `211116_A01366_0091_BH3YLGDMXY`
+- `211130_A01366_0101_BH3YWKDMXY`
+- `220125_A01366_0132_AH5VMHDMXY`
+- `220422_A01366_0181_AHCH3FDMXY`
+- `220428_A01366_0186_AHCCVFDMXY`
+- `220509_A01366_0195_AHCCTWDMXY`
+- `220610_A01366_0217_BHCGJGDMXY`
+- `230428_A01366_0383_BH3HYNDSX7`
+- `230505_A01366_0385_BHYC5YDSX5`
+
+## extract_reads_by_barcode.py
+
+### Overview:
+The script will go through the `fastq` file and extract reads containing the barcode each to an individual file. Output files will be appended with the barcode/sgRNA name.
+
+### Usage: 
+`python extract_reads_by_barcode.py <input.fastq(.gz)> <barcodes.csv>`
+
+### Details:
+`input.fastq(.gz)` is a raw fastq containing raw reads
+
+`barcodes.csv` should contain two columns, col1 should be the barcode/sgRNA name, col2 should be the actual barcode
+
+## First test run
+
+Initial testing of the script done on the command line. Outputs saved to `test`.
+
+```
+python extract_reads_by_barcode.py /nemo/stp/babs/inputs/sequencing/data/swantonc/su-kit.chew/DN20060/primary_data/201008_K00371_0408_AHHYFWBBXY/fastq/CHE723A62_S65_L007_R1_001.fastq.gz barcodes.csv
+```
+
+```
+python extract_reads_by_barcode.py /nemo/stp/babs/inputs/sequencing/data/swantonc/su-kit.chew/DN20060/primary_data/201008_K00371_0408_AHHYFWBBXY/fastq/CHE723A62_S65_L007_R2_001.fastq.gz barcodes.csv
+```
+
+## Is R2 just reverse complement of R1?
+
+It doesn't look like it...
+
+Search for reverse complement of barcodes in fastq file
+
+9p21_01 = CCACTTCT
+
+9p21_01 rev complement = AGAAGTGG
