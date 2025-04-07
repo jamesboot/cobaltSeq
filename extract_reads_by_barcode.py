@@ -5,15 +5,45 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-def read_paired_fastq(r1_path, r2_path):
-    """Generator to read paired-end FASTQ files (R1 and R2)."""
-    if r1_path.endswith('.gz'):
+# Function for count total reads in a FASTQ file
+# This function counts the number of reads in a FASTQ file by counting the number of lines
+# and dividing by 4 (since each read consists of 4 lines: header, sequence, plus line, quality).
+# It handles both gzipped and uncompressed files.
+def count_total_reads(fastq_file):
+    """Count the total number of reads in a FASTQ file."""
+    if fastq_file.endswith('.gz'):
         opener = gzip.open
         mode = 'rt'
     else:
         opener = open
         mode = 'r'
 
+    count = 0
+    with opener(fastq_file, mode) as f:
+        for _ in f:
+            count += 1
+    return count // 4  # Each read consists of 4 lines
+
+# Function to read paired-end FASTQ files
+# This function reads paired-end FASTQ files (R1 and R2) line by line.
+# It yields a tuple containing the header, sequence, plus line, and quality line for both R1 and R2.
+# It handles both gzipped and uncompressed files.
+# The function uses a generator to yield the reads one by one, which is memory efficient for large files.
+# It assumes that the input files are in the correct format and that R1 and R2 are in the same order.
+# The function will stop reading when it reaches the end of either file.
+def read_paired_fastq(r1_path, r2_path):
+    """Generator to read paired-end FASTQ files (R1 and R2)."""
+    # Check if the input files are gzipped or not
+    # and set the appropriate opener and mode
+    if r1_path.endswith('.gz'):
+        opener = gzip.open
+        mode = 'rt'
+    else:
+        opener = open
+        mode = 'r'
+        
+    # Open both files using the appropriate opener
+    # and read them line by line
     with opener(r1_path, mode) as f1, opener(r2_path, mode) as f2:
         while True:
             r1_header = f1.readline().strip()
@@ -32,6 +62,7 @@ def read_paired_fastq(r1_path, r2_path):
             yield (r1_header, r1_sequence, r1_plus, r1_quality, 
                    r2_header, r2_sequence, r2_plus, r2_quality)
 
+# Function to load barcodes from a CSV file
 def load_barcodes(csv_file):
     """Load barcodes from a CSV file."""
     barcodes = {}
@@ -44,6 +75,12 @@ def load_barcodes(csv_file):
             barcodes[name] = seq
     return barcodes
 
+# Main function to extract paired reads and 30-nt sequences starting with 'GC'
+# This function takes the input R1 and R2 FASTQ files, a CSV file with barcodes,
+# and extracts the paired reads and 30-nt sequences starting with 'GC'.
+# It creates output files for each barcode and writes the corresponding reads and sequences.
+# It also counts the total number of reads in the input files and writes the counts to a CSV file.
+# The output files are named based on the sample ID, Illumina ID, lane ID, and barcode name.
 def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
     """Extract paired reads and 30-nt sequences starting with 'GC'."""
     barcodes = load_barcodes(barcodes_csv)
@@ -58,10 +95,12 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
     # Create output folder 
     Path(run_id).mkdir(parents=True, exist_ok=True)
 
+    # Initialize dictionaries to store output handles and sequence counts
     output_handles = {}
     sequence_files = {}
     sequence_counts = defaultdict(lambda: defaultdict(int))
 
+    # Create output files for each barcode
     for barcode_name in barcodes:
         r1_output_file = f'{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_R1.fastq'
         r2_output_file = f'{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_R2.fastq'
@@ -70,11 +109,19 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
         output_handles[barcode_name] = (open(r1_output_file, 'w'), open(r2_output_file, 'w'))
         sequence_files[barcode_name] = open(seq_output_file, 'w')
 
+    # Read paired-end FASTQ files and extract reads and sequences
+    # for each barcode
     for (r1_header, r1_sequence, r1_plus, r1_quality, 
          r2_header, r2_sequence, r2_plus, r2_quality) in read_paired_fastq(input_r1, input_r2):
 
+        # Check if the read contains any of the barcodes
+        # and extract the corresponding reads and sequences
         for barcode_name, barcode_seq in barcodes.items():
+            # Check if the barcode sequence is present in the R1 sequence
+            # and find its index
             index = r1_sequence.find(barcode_seq)
+            # If the barcode sequence is found, extract the reads
+            # and sequences and write them to the corresponding files
             if index != -1:
                 r1_out, r2_out = output_handles[barcode_name]
                 seq_out = sequence_files[barcode_name]
@@ -82,6 +129,11 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
                 r1_out.write(f'{r1_header}\n{r1_sequence}\n{r1_plus}\n{r1_quality}\n')
                 r2_out.write(f'{r2_header}\n{r2_sequence}\n{r2_plus}\n{r2_quality}\n')
 
+                # Extract the 30-nt sequence starting from the position
+                # after the barcode sequence
+                # Check if the next 30-nt sequence starts with 'GC'
+                # and contains the specified patterns
+                # and ends with 'GC'
                 start_pos = index + len(barcode_seq)
                 if start_pos + 30 <= len(r1_sequence):
                     next_30nt = r1_sequence[start_pos:start_pos + 30]
@@ -92,19 +144,29 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
                         sequence_counts[barcode_name][next_30nt] += 1
                 
                 break
-
+            
+    # Close all output files            
     for r1_out, r2_out in output_handles.values():
         r1_out.close()
         r2_out.close()
     for seq_out in sequence_files.values():
         seq_out.close()
+        
+    # Count total reads in input FASTQ files
+    total_reads_r1 = count_total_reads(input_r1)
+    total_reads_r2 = count_total_reads(input_r2)
 
+    # Write the counts to a CSV file for each barcode
+    # The CSV file contains the sequence, count, barcode name, sample ID,
+    # Illumina ID, lane ID, run ID, and total reads in R1 and R2
+    # The output files are named based on the sample ID, Illumina ID,
+    # lane ID, and barcode name
     for barcode_name in sequence_counts:
         count_file = f"{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_counts.csv"
         with open(count_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for sequence, count in sorted(sequence_counts[barcode_name].items(), key=lambda x: -x[1]):
-                writer.writerow([sequence, count, barcode_name, sample_id, illumina_id, lane_id, run_id])  # No header, includes barcode name
+                writer.writerow([sequence, count, barcode_name, sample_id, illumina_id, lane_id, run_id, total_reads_r1, total_reads_r2])  # No header, includes barcode name
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
