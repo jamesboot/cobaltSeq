@@ -99,6 +99,7 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
     output_handles = {}
     sequence_files = {}
     sequence_counts = defaultdict(lambda: defaultdict(int))
+    gRNA_counts = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
     # Create output files for each barcode
     for barcode_name in barcodes:
@@ -128,6 +129,9 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
 
                 r1_out.write(f'{r1_header}\n{r1_sequence}\n{r1_plus}\n{r1_quality}\n')
                 r2_out.write(f'{r2_header}\n{r2_sequence}\n{r2_plus}\n{r2_quality}\n')
+                
+                # Increment the count of valid barcodes
+                gRNA_counts[sample_id][barcode_name]['valid_gRNA'] += 1
 
                 # Extract the 30-nt sequence starting from the position
                 # after the barcode sequence
@@ -142,7 +146,15 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
                         # and update the count
                         seq_out.write(next_30nt + "\n")
                         sequence_counts[barcode_name][next_30nt] += 1
-                
+                        gRNA_counts[sample_id][barcode_name]['valid_rand_bc'] += 1
+                    else:
+                        # If the sequence does not match the criteria, increment the invalid count
+                        gRNA_counts[sample_id][barcode_name]['rand_bc_seq_error'] += 1
+                else:
+                    # If the sequence is too short, increment the invalid count
+                    gRNA_counts[sample_id][barcode_name]['rand_bc_too_short'] += 1    
+                # Break because we only want to process one barcode per read
+                # If the barcode sequence is found, we can stop checking other barcodes
                 break
             
     # Close all output files            
@@ -165,8 +177,22 @@ def extract_paired_reads_and_gc_30nt(input_r1, input_r2, barcodes_csv):
         count_file = f"{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_counts.csv"
         with open(count_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            # Write the header for the CSV file
+            writer.writerow(['rand_bc', 'count', 'gRNA', 'sample_id', 'illumina_id', 'lane_id', 'run_id', 'total_reads_R1', 'total_reads_R2'])
+            # Write the counts for each sequence in descending order
+            # sorted by count
             for sequence, count in sorted(sequence_counts[barcode_name].items(), key=lambda x: -x[1]):
                 writer.writerow([sequence, count, barcode_name, sample_id, illumina_id, lane_id, run_id, total_reads_r1, total_reads_r2])  # No header, includes barcode name
+
+    # Write the gRNA counts to a CSV file
+    gRNA_count_file = f"{run_id}/{sample_id}_{illumina_id}_{lane_id}_gRNA_counts.csv"
+    with open(gRNA_count_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        # Write the header for the gRNA counts CSV file
+        writer.writerow(['sample_id', 'barcode_name', 'total_reads_R1', 'total_reads_R2', 'valid_gRNA', 'valid_rand_bc', 'rand_bc_seq_error', 'rand_bc_too_short'])
+        # Write the counts for each barcode
+        for barcode_name, counts in gRNA_counts[sample_id].items():
+            writer.writerow([sample_id, barcode_name, total_reads_r1, total_reads_r2, counts['valid_gRNA'], counts['valid_rand_bc'], counts['rand_bc_seq_error'], counts['rand_bc_too_short']])
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
