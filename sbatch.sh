@@ -19,8 +19,8 @@ R1_FILES=${PROJDIR}/R1_files.txt
 R2_FILES=${PROJDIR}/R2_files.txt
 REPO=/nemo/stp/babs/working/bootj/github/cobaltSeq
 BARCODES=${REPO}/barcodes.csv
-#ITER=$(wc -l < ${R1_FILES})
-ITER=5
+ITER=$(wc -l < ${R1_FILES})
+#ITER=5
 
 # For loop to iterate over all samples
 for i in $(seq ${ITER}); do
