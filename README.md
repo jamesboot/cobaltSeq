@@ -20,7 +20,11 @@
 ## extract_reads_by_barcode.py
 
 ### Overview:
-The script will go through the paired `fastq` files (R1 & R2) and extract reads containing the all the gRNA barcodes,  supplied in `<barcodes.csv>`, and save reads to individual files for each gRNA. It will also extract and count occurences of the random 30nt barcode that immediately follows the gRNA barcode. the random barcode must start and end with `GC`, and also contain `TA` at positions 7 and 21, and another `GC` at position 14. Output files will be pre-appended with the barcode/sgRNA name.
+The script will go through the paired `fastq` files (R1 & R2) and extract reads containing the all the gRNA barcodes,  supplied in `<barcodes.csv>`, and save reads to individual files for each gRNA. gRNA barcodes must be an exact match.
+
+It will also extract and count occurences of the random 30nt barcode that immediately follows the gRNA barcode. The random barcode must start and end with `GC`, and also contain `TA` at positions 7 and 21, and another `GC` at position 14. Output files will be pre-appended with the barcode/gRNA name.
+
+The script will also report the number of total reads, valid gRNA barcodes, random barcodes that do not meet the sequence criteria and random barcodes that are too short.
 
 NOTE: input files must be the full absolute path to the file, the script makes assumptions on NEMO directory structure.
 
@@ -33,6 +37,21 @@ NOTE: input files must be the full absolute path to the file, the script makes a
 `R2.fastq(.gz)` is the full absolute path to a R2 fastq containing raw reads
 
 `barcodes.csv` should contain two columns, col1 should be the barcode/sgRNA name, col2 should be the actual barcode
+
+### Outputs:
+For each barcode:
+
+`{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_R1.fastq` - R1 filtered to gRNA 'x'
+
+`{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_R2.fastq` - R2 filtered to gRNA 'x'
+
+`{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_30nt.txt` - list of all random barcodes
+
+`{run_id}/{sample_id}_{illumina_id}_{lane_id}_{barcode_name}_counts.csv` - counts table of random barcode occurences
+
+For each sample:
+
+ `{run_id}/{sample_id}_{illumina_id}_{lane_id}_gRNA_counts.csv` - table summarising gRNA classifications
 
 ## find_files.sh
 
