@@ -20,27 +20,29 @@
 ## extract_reads_by_barcode.py
 
 ### Overview:
-The script will go through the `fastq` file and extract reads containing the barcode each to an individual file. Output files will be appended with the barcode/sgRNA name.
+The script will go through the paired `fastq` files (R1 & R2) and extract reads containing the all the gRNA barcodes,  supplied in `<barcodes.csv>`, and save reads to individual files for each gRNA. It will also extract and count occurences of the random 30nt barcode that immediately follows the gRNA barcode. the random barcode must start and end with `GC`, and also contain `TA` at positions 7 and 21, and another `GC` at position 14. Output files will be pre-appended with the barcode/sgRNA name.
+
+NOTE: input files must be the full absolute path to the file, the script makes assumptions on NEMO directory structure.
 
 ### Usage: 
-`python extract_reads_by_barcode.py <input.fastq(.gz)> <barcodes.csv>`
+`python extract_reads_by_barcode.py <R1.fastq(.gz)> <R2.fastq(.gz)> <barcodes.csv>`
 
 ### Details:
-`input.fastq(.gz)` is a raw fastq containing raw reads
+`R1.fastq(.gz)` is the full absolute path to a R1 fastq containing raw reads
+
+`R2.fastq(.gz)` is the full absolute path to a R2 fastq containing raw reads
 
 `barcodes.csv` should contain two columns, col1 should be the barcode/sgRNA name, col2 should be the actual barcode
 
-## First test run
+## find_files.sh
 
-Initial testing of the script done on the command line. Outputs saved to `test`.
+Bash script for finding and sorting all R1 and R2 files ready for processing by sbatch script. The search directory (`SEARCHDIR`) should be specified in the script. Output will be 2 sorted files listing all R1 and R2 files.
 
-```
-python extract_reads_by_barcode.py /nemo/stp/babs/inputs/sequencing/data/swantonc/su-kit.chew/DN20060/primary_data/201008_K00371_0408_AHHYFWBBXY/fastq/CHE723A62_S65_L007_R1_001.fastq.gz barcodes.csv
-```
+## sbatch.sh
 
-```
-python extract_reads_by_barcode.py /nemo/stp/babs/inputs/sequencing/data/swantonc/su-kit.chew/DN20060/primary_data/201008_K00371_0408_AHHYFWBBXY/fastq/CHE723A62_S65_L007_R2_001.fastq.gz barcodes.csv
-```
+Bash script for submitting all files for processing by the `extract_reads_by_barcode.py` script. `find_files.sh` should be run before running this script.
+
+If running testing set the `ITER` variable to the number of files you want to test on. The top `n` files will be used from the top of the R1 and R2 list files.
 
 ## Is R2 just reverse complement of R1?
 
