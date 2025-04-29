@@ -12,26 +12,25 @@
 SEARCHDIR=/nemo/stp/babs/working/bootj/projects/swantonc/eva.gongross/eg879
 
 # Define output file
-OUTPUT_FILE="allcounts.csv"
+OUTPUT_FILE1="allcounts.csv"
+OUTPUT_FILE2="all_gRNA_counts.csv"
 
 # Find files 
 find -L ${SEARCHDIR} -name "*_counts.csv" | sort >> all_counts_outs.txt
-
-# Also concatenate the gRNA counts files 
 find -L ${SEARCHDIR} -name "*_gRNA_counts.csv" | sort >> all_gRNA_counts_outs.txt
 
 # Concatenate the counts files
 # Create or clear the output file
-> "${OUTPUT_FILE}"
+> "${OUTPUT_FILE1}"
 # Read each file from the list and append it to the output file
 # Skip first line of each file
 while IFS= read -r file; do
     if [ -f "$file" ]; then
         # Skip the header line of each file except the first one
         if [ "$file" != "$(head -n 1 all_counts_outs.txt)" ]; then
-            tail -n +2 "$file" >> "${OUTPUT_FILE}"
+            tail -n +2 "$file" >> "${OUTPUT_FILE1}"
         else
-            cat "$file" >> "${OUTPUT_FILE}"
+            cat "$file" >> "${OUTPUT_FILE1}"
         fi
     else
         echo "Warning: File '$file' not found, skipping."
@@ -39,5 +38,19 @@ while IFS= read -r file; do
 done < all_counts_outs.txt
 
 # Concatenate the gRNA counts files
-cat $(< all_gRNA_counts_outs.txt) > all_gRNA_counts.csv
-
+# Create or clear the output file
+> "${OUTPUT_FILE2}"
+# Read each file from the list and append it to the output file
+# Skip first line of each file
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        # Skip the header line of each file except the first one
+        if [ "$file" != "$(head -n 1 all_gRNA_counts_outs.txt)" ]; then
+            tail -n +2 "$file" >> "${OUTPUT_FILE2}"
+        else
+            cat "$file" >> "${OUTPUT_FILE2}"
+        fi
+    else
+        echo "Warning: File '$file' not found, skipping."
+    fi
+done < all_gRNA_counts_outs.txt
